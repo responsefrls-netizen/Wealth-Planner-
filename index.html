@@ -13,8 +13,8 @@ body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-appl
 main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:1.55rem;line-height:1.2;margin:4px 0 6px}
 .sub{color:var(--mu);margin:0 0 16px}
-.tabs{display:flex;gap:8px;margin-bottom:14px}
-.tabs button{flex:1;padding:11px 4px;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--tx);font:inherit;font-size:.88rem;font-weight:600}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.tabs button{flex:1 1 40%;padding:11px 4px;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--tx);font:inherit;font-size:.88rem;font-weight:600}
 .tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px 16px;margin-bottom:14px}
 .f{margin-bottom:12px}.f:last-child{margin-bottom:0}
@@ -35,13 +35,14 @@ input[type=range]{width:100%;accent-color:var(--ac);margin:6px 0 0}
 .cta .row{margin-bottom:8px}.cta input{width:62%;text-align:left}
 .btn{display:block;text-align:center;background:var(--ac);color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;margin-top:6px}
 .fine{font-size:.74rem;color:var(--mu);margin-top:14px}
+.tb{width:100%;border-collapse:collapse;font-size:.82rem}.tb th{color:var(--mu);font-weight:600;text-align:right;padding:4px 2px}.tb td{padding:7px 2px;border-top:1px solid var(--bd);text-align:right}.tb th:first-child,.tb td:first-child{text-align:left}.tb small{display:block;color:var(--mu);font-size:.7rem}.tb .tot td{font-weight:700}
 </style>
 </head>
 <body>
 <main>
 <h1>See what your money can become</h1>
 <p class="sub">Move the sliders. Watch compounding do the heavy lifting.</p>
-<div class="tabs"><button id="t-sip" class="on">Build wealth</button><button id="t-goal">Plan a goal</button><button id="t-swp">Retirement</button></div>
+<div class="tabs"><button id="t-sip" class="on">Build wealth</button><button id="t-goal">Plan a goal</button><button id="t-swp">Retirement</button><button id="t-inc">Monthly income</button></div>
 <div class="card" id="fields"></div>
 <div id="out"></div>
 <div class="card cta">
@@ -65,7 +66,10 @@ const F={
  goal:[['Goal cost today (₹)',1000000,100000,50000000,100000],['Years to goal',20,1,40,1],['Inflation (% p.a.)',7,3,10,0.5],['Expected return (% p.a.)',12,4,18,0.5],['Yearly SIP top-up (%)',10,0,25,1]]
 };
 F.swp=[['Monthly SIP (₹)',20000,1000,200000,1000],['Yearly SIP top-up (%)',5,0,25,1],['SIP years (until withdrawals start)',20,1,40,1],['Your current age',30,18,60,1],['Return while investing (% p.a.)',12,4,18,0.5],['Monthly withdrawal, today’s value (₹)',50000,5000,500000,5000],['Yearly increase in withdrawal (%)',6,0,10,0.5],['Return during withdrawals (% p.a.)',9,4,14,0.5]];
-let tab='sip',sum='';const V={sip:F.sip.map(f=>f[1]),goal:F.goal.map(f=>f[1]),swp:F.swp.map(f=>f[1])};
+F.inc=[['Fixed deposit (₹) · 8%',3000000,0,10000000,100000],['Bonds (₹) · 9%',3000000,0,10000000,100000],['MIS (₹) · 7.4%',1500000,0,10000000,100000],['SWP mutual fund (₹) · 12%',15000000,0,50000000,500000],['Commercial real estate (₹) · 8% rent',2500000,0,20000000,100000]];
+let tab='sip',sum='';const V={sip:F.sip.map(f=>f[1]),goal:F.goal.map(f=>f[1]),swp:F.swp.map(f=>f[1]),inc:F.inc.map(f=>f[1])};
+const INC=[['FD',8,3],['Bonds',9,3],['MIS',7.4,5],['SWP MF',12,5],['Real estate',8,5]];
+function inc(v){return INC.map((p,i)=>{const a=v[i],n=p[0],r=p[1],y=p[2];let mo=a*r/100/12,end=a;if(n==='SWP MF'){mo=a*.08/12;const q=Math.pow(1+r/100,1/12)-1;let b=a;for(let k=0;k<y*12;k++)b=b*(1+q)-mo;end=Math.max(b,0)}else if(n==='Real estate'){end=a*Math.pow(1.05,y)}return{n,r,y,a,mo,end}})}
 function swp(m,t,n,a,rs,w,g,rw){const ms=Math.pow(1+rs/100,1/12)-1,mw=Math.pow(1+rw/100,1/12)-1,rows=[];let bal=0,last=null;for(let k=1;k<=100;k++){const age=a+k-1,sip=k<=n?m*Math.pow(1+t/100,k-1):0,wd=k>n?12*w*Math.pow(1+g/100,k-1):0;let L=Math.max(bal-wd,0);if(k>n&&L===0&&last===null)last=age-1;const r=k>n?mw:ms,f=Math.pow(1+r,12);bal=L*f+sip*(f-1)/r*(1+r);rows.push({age,bal,wd})}return{rows,last,sb:rows[n-1].bal,w0:rows[n].wd/12}}
 function swpChart(x,n,a){const e=x.last===null?Math.min(100,n+35):Math.min(100,x.last-a+3),d=x.rows.slice(0,e),W=600,H=190,N=d.length,mx=Math.max(...d.map(p=>p.bal))||1,bw=W/N,gp=Math.min(4,bw*.25);let s='';d.forEach((p,i)=>{const h=p.bal/mx*H;s+=`<rect x="${i*bw+gp/2}" y="${H-h}" width="${bw-gp}" height="${h}" fill="${i<n?'var(--ac)':'#e08a2e'}"/>`});return `<div class="card"><svg viewBox="0 0 ${W} ${H+18}" width="100%" role="img" aria-label="Portfolio value by age">${s}<text x="0" y="${H+14}" font-size="12" fill="var(--mu)">Age ${a}</text><text x="${W}" y="${H+14}" font-size="12" text-anchor="end" fill="var(--mu)">Age ${d[N-1].age}</text></svg><div class="leg"><span><i style="background:var(--ac)"></i>Investing</span><span><i style="background:#e08a2e"></i>Withdrawing</span></div></div>`}
 function sim(m,t,y,r,l,d){const mr=Math.pow(1+r/100,1/12)-1;let b=l,inv=l,s=m,o=[];for(let k=0;k<y;k++){for(let j=0;j<12;j++){if(k>=d){b=(b+s)*(1+mr);inv+=s}else b=b*(1+mr)}if(k>=d)s*=1+t/100;o.push({inv,val:b})}return o}
@@ -79,6 +83,11 @@ if(tab==='sip'){const[m,t,y,r,l]=v;d=sim(m,t,y,r,l,0);const e=d[y-1];
  h=cards([['You invest',inr(e.inv)],['Wealth created',inr(e.val)],['Growth from compounding',inr(e.val-e.inv)]]);
  if(y>5){const w=sim(m,t,y,r,l,5)[y-1].val;h+=`<p class="ins">⏳ Starting just <b>5 years later</b> leaves you with <b>${inr(w)}</b>, which is <b>${inr(e.val-w)}</b> less. Time is your biggest asset.</p>`}
  sum=`SIP ₹${m}/month, ${t}% yearly top-up, ${y} yrs at ${r}% → ${inr(e.val)}${l?` (+₹${l} lump sum)`:''}`}
+else if(tab==='inc'){const R=inc(v),T=R.reduce((s,r)=>s+r.a,0),M=R.reduce((s,r)=>s+r.mo,0),E=R.reduce((s,r)=>s+r.end,0);d=null;
+ h=cards([['Total invested',inr(T)],['Monthly income',inr(M)],['Yearly income yield',(T?M*12/T*100:0).toFixed(1)+'%']]);
+ h+=`<p class="ins">💰 This mix pays about <b>${inr(M)}</b> every month. At the end of the terms the money is worth about <b>${inr(E)}</b>.</p>`;
+ h+=`<div class="card" style="overflow-x:auto"><table class="tb"><tr><th>Instrument</th><th>Return</th><th>Monthly</th><th>End value</th></tr>${R.map(r=>`<tr><td>${r.n}<small>${r.y} yrs</small></td><td>${r.r}%</td><td>${inr(r.mo)}</td><td>${inr(r.end)}</td></tr>`).join('')}<tr class="tot"><td>Total</td><td></td><td>${inr(M)}</td><td>${inr(E)}</td></tr></table></div><p class="fine">Illustrative rates. SWP assumes 8% of the amount is withdrawn each year and the rest stays invested. Real estate assumes 5% yearly price growth. FD, bond and rental rates can change.</p>`;
+ sum=`Monthly income portfolio: ${inr(T)} invested → about ${inr(M)}/month`}
 else if(tab==='swp'){const[m,t,n,a,rs,w,g,rw]=v,x=swp(m,t,n,a,rs,w,g,rw),y5=swp(m,t,n+5,a,rs,w,g,rw),lt=z=>z.last===null?'Beyond '+(a+99):'Age '+z.last;d=null;
  h=cards([[`Wealth at age ${a+n}`,inr(x.sb)],[`Monthly income at ${a+n}`,inr(x.w0)],['Wealth lasts till',lt(x)]]);
  if(x.last!==null)h+=`<p class="ins">⏳ Keep the SIP going <b>5 more years</b> and your wealth lasts till <b>${y5.last===null?'beyond age '+(a+99):'age '+y5.last}</b> instead of age <b>${x.last}</b>.</p>`;
@@ -91,8 +100,8 @@ $('out').innerHTML=h+(d?chart(d):'');wa()}
 function wa(){const nm=$('nm').value.trim(),ph=$('ph').value.trim();
  const t=`Hi${RM_NAME?' '+RM_NAME:''}, I'm ${nm||'(name)'}${ph?' ('+ph+')':''}. I tried your wealth planner and would like a personalised plan. My numbers: ${sum}`;
  $('wa').href='https://wa.me/'+RM_NUMBER.replace(/\D/g,'')+'?text='+encodeURIComponent(t)}
-function sw(t){tab=t;$('t-sip').className=t==='sip'?'on':'';$('t-goal').className=t==='goal'?'on':'';$('t-swp').className=t==='swp'?'on':'';fields();render()}
-$('t-sip').onclick=()=>sw('sip');$('t-goal').onclick=()=>sw('goal');$('t-swp').onclick=()=>sw('swp');$('nm').oninput=wa;$('ph').oninput=wa;
+function sw(t){tab=t;$('t-sip').className=t==='sip'?'on':'';$('t-goal').className=t==='goal'?'on':'';$('t-swp').className=t==='swp'?'on':'';$('t-inc').className=t==='inc'?'on':'';fields();render()}
+$('t-sip').onclick=()=>sw('sip');$('t-goal').onclick=()=>sw('goal');$('t-swp').onclick=()=>sw('swp');$('t-inc').onclick=()=>sw('inc');$('nm').oninput=wa;$('ph').oninput=wa;
 $('by').innerHTML='<b>Prepared by Jayshree Mehta</b><br>Founder – Future Ready Investments<br>AMFI Registered Mutual Fund Distributor · ARN-47486';
 fields();render();
 </script>
